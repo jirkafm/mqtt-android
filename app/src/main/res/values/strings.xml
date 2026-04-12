@@ -1,4 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">MQTT Mail Client</string>
+    <string name="app_name">mqtt-android</string>
+    <string name="notification_channel_sync">MQTT sync</string>
+    <string name="notification_channel_messages">Incoming MQTT messages</string>
+    <string name="sync_connecting">Connecting to broker</string>
+    <string name="sync_connected">Connected to broker</string>
+    <string name="sync_disconnected">Disconnected</string>
+    <string name="sync_error">Connection error</string>
+    <string name="sync_connecting_description">mqtt-android is starting the background connection.</string>
+    <string name="sync_connected_description">mqtt-android is listening for topic updates.</string>
+    <string name="sync_disconnected_description">mqtt-android is not connected.</string>
+    <string name="sync_start">Start listener</string>
+    <string name="sync_stop">Stop listener</string>
+    <string name="notification_new_message_title">New MQTT message</string>
 </resources>

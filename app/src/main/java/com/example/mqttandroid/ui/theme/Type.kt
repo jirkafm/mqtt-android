@@ -1,4 +1,4 @@
-package com.example.mqttmailclient.ui.theme
+package com.example.mqttandroid.ui.theme
 
 import androidx.compose.material3.Typography
 
