@@ -4,6 +4,9 @@ import android.content.Context
 import android.speech.tts.TextToSpeech
 import java.util.Locale
 
+private const val BURST_WINDOW_MILLIS = 5_000L
+private const val INDIVIDUAL_ANNOUNCEMENT_LIMIT = 3
+
 class MqttEventSpeaker(context: Context) : TextToSpeech.OnInitListener {
     private val applicationContext = context.applicationContext
     private val pendingAnnouncements = mutableListOf<String>()
@@ -61,10 +64,70 @@ class MqttEventSpeaker(context: Context) : TextToSpeech.OnInitListener {
     }
 }
 
+internal data class TopicAnnouncementBurst(
+    val count: Int,
+    val lastEventAtEpochMillis: Long,
+    val summarized: Boolean
+)
+
+internal data class TopicAnnouncementResult(
+    val announcement: String?,
+    val nextBurst: TopicAnnouncementBurst
+)
+
+internal fun nextAnnouncementResult(
+    currentBurst: TopicAnnouncementBurst?,
+    topicLabel: String,
+    topic: String,
+    nowEpochMillis: Long
+): TopicAnnouncementResult {
+    val activeBurst = if (
+        currentBurst == null ||
+        nowEpochMillis - currentBurst.lastEventAtEpochMillis > BURST_WINDOW_MILLIS
+    ) {
+        TopicAnnouncementBurst(
+            count = 0,
+            lastEventAtEpochMillis = nowEpochMillis,
+            summarized = false
+        )
+    } else {
+        currentBurst
+    }
+
+    val nextCount = activeBurst.count + 1
+    val nextBurst = TopicAnnouncementBurst(
+        count = nextCount,
+        lastEventAtEpochMillis = nowEpochMillis,
+        summarized = nextCount > INDIVIDUAL_ANNOUNCEMENT_LIMIT
+    )
+
+    val announcement = when {
+        nextCount <= INDIVIDUAL_ANNOUNCEMENT_LIMIT ->
+            buildIncomingEventAnnouncement(topicLabel, topic)
+        nextCount == INDIVIDUAL_ANNOUNCEMENT_LIMIT + 1 ->
+            buildBurstSummaryAnnouncement(topicLabel, topic, nextCount)
+        else -> null
+    }
+
+    return TopicAnnouncementResult(
+        announcement = announcement,
+        nextBurst = nextBurst
+    )
+}
+
 internal fun buildIncomingEventAnnouncement(
     topicLabel: String,
     topic: String
 ): String {
     val spokenTarget = topicLabel.ifBlank { topic }
     return "New event on $spokenTarget"
+}
+
+internal fun buildBurstSummaryAnnouncement(
+    topicLabel: String,
+    topic: String,
+    count: Int
+): String {
+    val spokenTarget = topicLabel.ifBlank { topic }
+    return "There are $count messages on $spokenTarget"
 }
