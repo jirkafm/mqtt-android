@@ -124,4 +124,51 @@ class MqttEventSpeakerTest {
             )
         )
     }
+
+    @Test
+    fun nextAnnouncementFromTopicBurstsTracksEachTopicIndependently() {
+        val topicBursts = mutableMapOf<String, TopicAnnouncementBurst>()
+
+        nextAnnouncementFromTopicBursts(
+            topicBursts = topicBursts,
+            topicLabel = "Front Door",
+            topic = "alerts/frontdoor",
+            nowEpochMillis = 1_000L
+        )
+        nextAnnouncementFromTopicBursts(
+            topicBursts = topicBursts,
+            topicLabel = "Front Door",
+            topic = "alerts/frontdoor",
+            nowEpochMillis = 2_000L
+        )
+        nextAnnouncementFromTopicBursts(
+            topicBursts = topicBursts,
+            topicLabel = "Front Door",
+            topic = "alerts/frontdoor",
+            nowEpochMillis = 3_000L
+        )
+
+        nextAnnouncementFromTopicBursts(
+            topicBursts = topicBursts,
+            topicLabel = "Garage",
+            topic = "alerts/garage",
+            nowEpochMillis = 3_500L
+        )
+
+        val fourthFrontDoor = nextAnnouncementFromTopicBursts(
+            topicBursts = topicBursts,
+            topicLabel = "Front Door",
+            topic = "alerts/frontdoor",
+            nowEpochMillis = 4_000L
+        )
+        val secondGarage = nextAnnouncementFromTopicBursts(
+            topicBursts = topicBursts,
+            topicLabel = "Garage",
+            topic = "alerts/garage",
+            nowEpochMillis = 4_100L
+        )
+
+        assertEquals("There are 4 messages on Front Door", fourthFrontDoor)
+        assertEquals("New event on Garage", secondGarage)
+    }
 }

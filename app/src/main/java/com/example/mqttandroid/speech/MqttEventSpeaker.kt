@@ -7,9 +7,13 @@ import java.util.Locale
 private const val BURST_WINDOW_MILLIS = 5_000L
 private const val INDIVIDUAL_ANNOUNCEMENT_LIMIT = 3
 
-class MqttEventSpeaker(context: Context) : TextToSpeech.OnInitListener {
+class MqttEventSpeaker(
+    context: Context,
+    private val nowProvider: () -> Long = System::currentTimeMillis
+) : TextToSpeech.OnInitListener {
     private val applicationContext = context.applicationContext
     private val pendingAnnouncements = mutableListOf<String>()
+    private val topicBursts = mutableMapOf<String, TopicAnnouncementBurst>()
     private var initialized = false
     private var available = true
     private val textToSpeech = TextToSpeech(applicationContext, this)
@@ -40,7 +44,12 @@ class MqttEventSpeaker(context: Context) : TextToSpeech.OnInitListener {
         topic: String
     ) {
         if (!available) return
-        val announcement = buildIncomingEventAnnouncement(topicLabel, topic)
+        val announcement = nextAnnouncementFromTopicBursts(
+            topicBursts = topicBursts,
+            topicLabel = topicLabel,
+            topic = topic,
+            nowEpochMillis = nowProvider()
+        ) ?: return
         if (!initialized) {
             pendingAnnouncements += announcement
             return
@@ -50,6 +59,7 @@ class MqttEventSpeaker(context: Context) : TextToSpeech.OnInitListener {
 
     fun shutdown() {
         pendingAnnouncements.clear()
+        topicBursts.clear()
         textToSpeech.stop()
         textToSpeech.shutdown()
     }
@@ -74,6 +84,23 @@ internal data class TopicAnnouncementResult(
     val announcement: String?,
     val nextBurst: TopicAnnouncementBurst
 )
+
+internal fun nextAnnouncementFromTopicBursts(
+    topicBursts: MutableMap<String, TopicAnnouncementBurst>,
+    topicLabel: String,
+    topic: String,
+    nowEpochMillis: Long
+): String? {
+    val spokenTarget = topicLabel.ifBlank { topic }
+    val result = nextAnnouncementResult(
+        currentBurst = topicBursts[spokenTarget],
+        topicLabel = topicLabel,
+        topic = topic,
+        nowEpochMillis = nowEpochMillis
+    )
+    topicBursts[spokenTarget] = result.nextBurst
+    return result.announcement
+}
 
 internal fun nextAnnouncementResult(
     currentBurst: TopicAnnouncementBurst?,
