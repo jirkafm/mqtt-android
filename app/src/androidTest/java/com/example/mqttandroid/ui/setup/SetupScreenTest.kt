@@ -205,4 +205,57 @@ class SetupScreenTest {
         org.junit.Assert.assertEquals(1L, markedTopicId)
         org.junit.Assert.assertEquals(1L, clearedTopicId)
     }
+
+    @Test
+    fun removeTopicRequiresConfirmationBeforeDeleteCallbackRuns() {
+        var deletedTopicId: Long? = null
+
+        composeRule.setContent {
+            MqttAndroidTheme {
+                SetupScreen(
+                    state = initialSetupUiState(defaultClientId = "android-test-id").copy(
+                        savedTopics = listOf(
+                            SavedTopicUiModel(
+                                id = 7L,
+                                topic = "alerts/frontdoor",
+                                displayName = "Front Door",
+                                qos = 1,
+                                unreadCount = 0,
+                                lastError = null
+                            )
+                        )
+                    ),
+                    onHostChanged = {},
+                    onPortChanged = {},
+                    onClientIdChanged = {},
+                    onUsernameChanged = {},
+                    onPasswordChanged = {},
+                    onTlsChanged = {},
+                    onSaveBroker = {},
+                    onTopicChanged = {},
+                    onTopicDisplayNameChanged = {},
+                    onTopicQosChanged = {},
+                    onAddTopic = {},
+                    onDeleteTopic = { deletedTopicId = it },
+                    onToggleTopicHistory = {},
+                    onMarkTopicRead = {},
+                    onClearTopicHistory = {},
+                    onStartSync = {},
+                    onStopSync = {}
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Remove").performClick()
+        composeRule.onNodeWithText("Remove topic?").assertIsDisplayed()
+        composeRule.onNodeWithText("Front Door").assertIsDisplayed()
+        composeRule.onNodeWithTag("cancel-remove-topic").performClick()
+
+        org.junit.Assert.assertEquals(null, deletedTopicId)
+
+        composeRule.onNodeWithText("Remove").performClick()
+        composeRule.onNodeWithTag("confirm-remove-topic").performClick()
+
+        org.junit.Assert.assertEquals(7L, deletedTopicId)
+    }
 }

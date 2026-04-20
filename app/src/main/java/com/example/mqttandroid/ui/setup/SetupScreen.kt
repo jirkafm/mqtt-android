@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -19,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -313,6 +315,7 @@ fun SetupScreen(
     onStopSync: () -> Unit
 ) {
     val controlsEnabled = !state.isConnecting
+    var pendingDeletionTopic by remember { mutableStateOf<SavedTopicUiModel?>(null) }
 
     Column(
         modifier = Modifier
@@ -486,7 +489,7 @@ fun SetupScreen(
                                     Text(if (state.expandedTopicId == topic.id) "Hide" else "History")
                                 }
                                 Button(
-                                    onClick = { onDeleteTopic(topic.id) },
+                                    onClick = { pendingDeletionTopic = topic },
                                     enabled = controlsEnabled
                                 ) {
                                     Text("Remove")
@@ -549,6 +552,37 @@ fun SetupScreen(
                 }
             }
         }
+    }
+
+    pendingDeletionTopic?.let { topic ->
+        AlertDialog(
+            onDismissRequest = { pendingDeletionTopic = null },
+            title = { Text("Remove topic?") },
+            text = {
+                Text(
+                    "Remove ${topic.displayName} from saved topics?\n${topic.topic}"
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDeleteTopic(topic.id)
+                        pendingDeletionTopic = null
+                    },
+                    modifier = Modifier.testTag("confirm-remove-topic")
+                ) {
+                    Text("Remove")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { pendingDeletionTopic = null },
+                    modifier = Modifier.testTag("cancel-remove-topic")
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
